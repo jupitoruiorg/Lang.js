@@ -56,6 +56,7 @@
         this.locale = options.locale || inferLocale() || defaults.locale;
         this.fallback = options.fallback;
         this.messages = options.messages;
+        this.dependents = options.dependents;
     };
 
     // Methods //
@@ -71,6 +72,10 @@
         this.messages = messages;
     };
 
+    Lang.prototype.setDependents = function(dependents) {
+        this.dependents = dependents;
+    };
+
     /**
      * Get the current locale.
      *
@@ -78,6 +83,10 @@
      */
     Lang.prototype.getLocale = function() {
         return this.locale || this.fallback;
+    };
+
+    Lang.prototype.getDependents = function() {
+        return this.dependents;
     };
 
     /**
@@ -221,8 +230,7 @@
             }
         }
 
-        locale = locale || this._getLocale(key);
-        var pluralForm = this._getPluralForm(number, locale);
+        var pluralForm = this._getPluralForm(number);
 
         return messageParts[pluralForm];
     };
@@ -256,7 +264,8 @@
         var source = segments[0].replace(/\//g, '.');
 
         return {
-            source: locale + '.' + source,
+            //source: locale + '.' + source,
+            source: key,
             sourceFallback: this.getFallback() + '.' + source,
             entries: segments.slice(1)
         };
@@ -272,7 +281,6 @@
      */
     Lang.prototype._getMessage = function(key, locale) {
         locale = locale || this.getLocale();
-        
         key = this._parseKey(key, locale);
 
         // Ensure message source exists.
@@ -283,22 +291,15 @@
         // Get message from default locale.
         var message = this.messages[key.source];
         var entries = key.entries.slice();
-        var subKey = entries.join('.');
-        message = message !== undefined ? this._getValueInKey(message, subKey) : undefined;
-
+        while (entries.length && message !== undefined && (message = message[entries.shift()]))
+            ;
 
         // Get message from fallback locale.
         if (typeof message !== 'string' && this.messages[key.sourceFallback]) {
             message = this.messages[key.sourceFallback];
             entries = key.entries.slice();
-            subKey = '';
-            while (entries.length && message !== undefined) {
-                var subKey = !subKey ? entries.shift() : subKey.concat('.', entries.shift());
-                if (message[subKey]) {
-                    message = message[subKey]
-                    subKey = '';
-                }
-            }
+            while (entries.length && (message = message[entries.shift()]))
+                ;
         }
 
         if (typeof message !== 'string') {
@@ -306,77 +307,6 @@
         }
 
         return message;
-    };
-
-    Lang.prototype._getValueInKey = function(obj, str) {
-        // If the full key exists just return the value
-        if (typeof obj[str] === 'string') {
-            return obj[str]
-        }
-
-        str = str.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
-        str = str.replace(/^\./, '');           // strip a leading dot
-
-        var parts = str.split('.');
-
-        for (var i = 0, n = parts.length; i < n; ++i) {
-            var currentKey = parts.slice(0, i + 1).join('.');
-            var restOfTheKey = parts.slice(i + 1, parts.length).join('.')
-            
-            if (obj[currentKey]) {
-                return this._getValueInKey(obj[currentKey], restOfTheKey)
-            }
-        }
-
-        return obj;
-    };
-
-    /**
-     * Return the locale to be used between default and fallback.
-     * @param {String} key
-     * @return {String}
-     */
-    Lang.prototype._getLocale = function(key) {
-        key = this._parseKey(key, this.locale)
-        if (this.messages[key.source]) {
-            return this.locale;
-        }
-        if (this.messages[key.sourceFallback]) {
-            return this.fallback;
-        }
-        return null;
-    };
-
-    /**
-     * Find a message in a translation tree using both dotted keys and regular ones
-     *
-     * @param pathSegments {array} An array of path segments such as ['family', 'father']
-     * @param tree {object} The translation tree
-     */
-    Lang.prototype._findMessageInTree = function(pathSegments, tree) {
-        while (pathSegments.length && tree !== undefined) {
-            var dottedKey = pathSegments.join('.');
-            if (tree[dottedKey]) {
-                tree = tree[dottedKey];
-                break;
-            }
-
-            tree = tree[pathSegments.shift()]
-        }
-
-        return tree;
-    };
-
-    /**
-     * Sort replacement keys by length in descending order.
-     *
-     * @param a {string} Replacement key
-     * @param b {string} Sibling replacement key
-     * @return {number}
-     * @private
-     */
-    Lang.prototype._sortReplacementKeys = function(a, b) {
-        return b.length - a.length;
     };
 
     /**
@@ -388,10 +318,8 @@
      * @return {string} The string message with replacements applied.
      */
     Lang.prototype._applyReplacements = function(message, replacements) {
-        var keys = Object.keys(replacements).sort(this._sortReplacementKeys);
-
-        keys.forEach(function(replace) {
-            message = message.replace(new RegExp(':' + replace, 'gi'), function (match) {
+        for (var replace in replacements) {
+            message = message.replace(new RegExp(':' + replace, 'gi'), function(match) {
                 var value = replacements[replace];
 
                 // Capitalize all characters.
@@ -410,7 +338,7 @@
 
                 return value;
             })
-        });
+        }
         return message;
     };
 
@@ -488,11 +416,10 @@
      * Copyright (c) 2005-2010 Zend Technologies USA Inc. (http://www.zend.com)
      *
      * @param {Number} count
-     * @param {String} locale
      * @return {Number}
      */
-    Lang.prototype._getPluralForm = function(count, locale) {
-        switch (locale) {
+    Lang.prototype._getPluralForm = function(count) {
+        switch (this.locale) {
             case 'az':
             case 'bo':
             case 'dz':
@@ -686,9 +613,7 @@
         }
     };
 
-    /**
-     * --------------------------------------
-     */
+    //GetCodes
 
     Lang.prototype.mTrans = function(module, key, replacements) {
 
