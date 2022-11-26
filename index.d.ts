@@ -5,6 +5,12 @@ declare module 'lang.js' {
         }
     }
 
+    interface Dependents {
+        [key: string]: {
+            [name: string]: string
+        }
+    }
+
     interface Replacements {
         [key: string]: string
     }
@@ -18,6 +24,7 @@ declare module 'lang.js' {
     export default class Lang {
         constructor(options: LangOptions);
         setMessages(messages: Messages): void;
+        setDependents(dependents: Dependents): void;
         getLocale(): string;
         setLocale(locale: string): void;
         getFallback(): string;
