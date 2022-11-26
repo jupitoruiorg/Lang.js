@@ -652,6 +652,11 @@
         var strKey = '';
         for(var i = 0; i < segments.length; i++) {
             strKey +=  strKey != '' ? '.'+segments[i] : segments[i];
+
+            if (!currMessage) {
+                continue;
+            }
+
             if(typeof currMessage[strKey] == 'object') {
                 currMessage = currMessage[strKey];
                 strKey = '';
