@@ -686,6 +686,77 @@
         }
     };
 
+    /**
+     * --------------------------------------
+     */
+
+    Lang.prototype.mTrans = function(module, key, replacements) {
+
+        if(typeof this.dependents[module] !== "undefined" && this.dependents[module] != null) {
+            var dependents = this.dependents[module];
+
+            if(!this.hasModule(dependents, key)) {
+                if (!this.hasModule(module, key)) {
+                    return key;
+                }
+            } else {
+                module = dependents;
+            }
+        } else {
+            if (!this.hasModule(module, key)) {
+                return key;
+            }
+        }
+
+        var message = this._getMessageByModule(module, key);
+        if (message === null) {
+            return key;
+        }
+
+        if (replacements) {
+            message = this._applyReplacements(message, replacements);
+        }
+
+        return message;
+    };
+
+    Lang.prototype._customMessage = function(module, key) {
+        key = this.getLocale() + '.' + key;
+        var segments = key.split('.');
+        var currMessage = this.messages[module];
+        var strKey = '';
+        for(var i = 0; i < segments.length; i++) {
+            strKey +=  strKey != '' ? '.'+segments[i] : segments[i];
+            if(typeof currMessage[strKey] == 'object') {
+                currMessage = currMessage[strKey];
+                strKey = '';
+            } else if(typeof currMessage[strKey] == 'string') {
+                currMessage = currMessage[strKey];
+                break;
+            }
+        }
+        return currMessage;
+    };
+
+    Lang.prototype.hasModule = function(module, key) {
+        if (typeof key !== 'string' || !this.messages) {
+            return false;
+        }
+
+        return this._getMessageByModule(module, key) !== null;
+    };
+
+    Lang.prototype._getMessageByModule = function(module, key) {
+        var message = null;
+        message = this._customMessage(module, key);
+
+        if (typeof message !== 'string') {
+            return null;
+        }
+
+        return message;
+    };
+
     return Lang;
 
 }));

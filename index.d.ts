@@ -27,5 +27,9 @@ declare module 'lang.js' {
         trans(key: string, replacements?: Replacements): string;
         choice(key: string, number: number, replacements?: Replacements, locale?: string): string;
         transChoice(key: string, count: number, replacements?: Replacements): string;
+        mTrans(module: string, key: string, replacements?: Replacements): string;
+        _customMessage(module: string, key: string): string;
+        hasModule(module: string, key: string): boolean;
+        _getMessageByModule(module: string, key: string): string;
     }
 }
